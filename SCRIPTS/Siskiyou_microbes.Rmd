@@ -1,0 +1,382 @@
+---
+title: "Siskiyou Microbes"
+author: "Courtney Collins"
+output: html_document
+---
+
+```{r setup, echo=FALSE, warning=FALSE, error=FALSE, message=F}
+#load packages
+library(ggplot2)
+library(phyloseq)
+library(microbiome)
+library(RColorBrewer)
+library(dplyr)
+library(knitr)
+library(tidyselect)
+library(gridExtra)
+library(ggpubr) 
+library(extrafont) 
+library(lme4)
+library(lmerTest)
+library(DescTools)
+library(knitr)
+library(tidyverse)
+library(rngtools)
+
+
+#load datasets 
+#Bacteria
+load("DATA/physeq.bac.Rdata")
+
+#Fungi
+load("DATA/physeq.fungi.Rdata")
+```
+
+>First let's consider differences between sites where Horkelia seeds were collected (Home) and the one successful transplant site (Away)
+
+```{r subset data, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+#comparing site 5 (away) with sites 1,9,and 10 (seed home) for both fungi and Bacteria. Basically want to ask if microbes where seeds were collected (sites 1,9,10) differ from site 5 where the new population is. Thanks!-Marko 
+physeq.bac.sub<-subset_samples(physeq.bac, Site=="1"| Site=="9"|Site=="10"| Site=="5")
+physeq.bac.away<-subset_samples(physeq.fungi,  Site=="5")
+
+physeq.fungi.sub<-subset_samples(physeq.fungi, Site=="1"| Site=="9"|Site=="10"| Site=="5")
+physeq.fungi.away<-subset_samples(physeq.fungi,  Site=="5")
+
+metabsub<-subset(metab, Site=="1"| Site=="9"|Site=="10"| Site=="5")
+metafsub<-subset(metaf, Site=="1"| Site=="9"|Site=="10"| Site=="5")
+metabaway<-subset(metab,  Site=="5")
+metafaway<-subset(metaf,  Site=="5")
+
+```
+
+##Run permanovas
+
+```{r Permanovas, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+#Bacteria
+bac_bray_sub<-distance(physeq.bac.sub, method = "bray")#slow
+bac_bray_sub<-as.matrix(bac_bray_sub)
+vegan::adonis(bac_bray_sub~Loc*Spp, data=metabsub, permutations = 999)# Loc sig 
+
+#Fungi 
+fungi_bray_sub<-distance(physeq.fungi.sub, method = "bray")
+fungi_bray_sub<-as.matrix(fungi_bray_sub)
+vegan::adonis(fungi_bray_sub~Loc*Spp, data=metafsub, permutations = 999)#all sig
+
+#now test away soils only for H vs bare 
+fungi_bray_away<-distance(physeq.fungi.away, method = "bray")
+fungi_bray_away<-as.matrix(fungi_bray_away)
+
+vegan::adonis(fungi_bray_away~Spp, data=metafaway, permutations = 999)#not different 
+
+```
+
+##Plot ordinations
+
+```{r Ordinations, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+#Bacteria
+bac.ord.sub<-ordinate(physeq.bac.sub, "PCoA", "bray")
+plot_ordination(physeq.bac.sub,bac.ord.sub, color = "Loc",
+                shape="Spp")+theme_classic()+geom_point(size=2)+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Sites")+
+  scale_shape_manual(values=c('square', 'circle'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+
+  ggtitle("PCoA Bacteria")
+
+#Fungi 
+fung.ord.sub<-ordinate(physeq.fungi.sub, "PCoA", "bray")
+
+plot_ordination(physeq.fungi.sub,fung.ord.sub, color = "Loc",
+                shape="Spp")+theme_classic()+geom_point(size=2)+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Sites")+
+  scale_shape_manual(values=c('square', 'circle'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+
+  ggtitle("PCoA Fungi")
+```
+
+>So microbial communities differ between home and away for Horkelia soils for Bacteria and fungi and between Horkelia and bare for fungi but not between Horkleia and bare at away sites. 
+
+
+>Now let's consider differences between away sites where Horkelia was and was not successful
+
+```{r subset data2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#For site 8 there was only one sample, so it was probably dropped because we can’t compare it to anything statistically.
+physeq.bac.away<-subset_samples(physeq.bac, Loc=="Away")#& Site!="8") 
+physeq.fungi.away<-subset_samples(physeq.fungi, Loc=="Away")#& Site!="8") 
+
+metabaway<-subset(metab, Loc=="Away")#& Site!="8") 
+metafaway<-subset(metaf, Loc=="Away") #& Site!="8") 
+metafaway<-subset(metafaway, Code!="W06N05HA"&
+Code!="W07N04HC"& Code!="W07N06XA")#remove missing samples 
+```
+
+
+##Run permanovas
+
+```{r Permanovas2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+#Bacteria
+bac_bray_away2<-distance(physeq.bac.away, method = "bray")#slow
+bac_bray_away2<-as.matrix(bac_bray_away2)
+vegan::adonis(bac_bray_away2~Hsuccess*Spp, data=metabaway, permutations = 999)
+
+#Fungi 
+fungi_bray_away2<-distance(physeq.fungi.away, method = "bray")
+fungi_bray_away2<-as.matrix(fungi_bray_away2)
+vegan::adonis(fungi_bray_away2~Hsuccess*Spp, data=metafaway, permutations = 999)
+
+```
+
+
+##Plot ordinations
+
+```{r Ordinations2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+#Bacteria
+bac.ord.away<-ordinate(physeq.bac.away, "PCoA", "bray")#slow
+plot_ordination(physeq.bac.away,bac.ord.away, color = "Hsuccess",
+                shape="Spp")+theme_classic()+geom_point(size=2)+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Successful")+
+  scale_shape_manual(values=c('square', 'circle'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+
+  ggtitle("PCoA Bacteria")
+
+#Fungi 
+fung.ord.away<-ordinate(physeq.fungi.away, "PCoA", "bray")
+plot_ordination(physeq.fungi.away,fung.ord.away, color="Hsuccess",
+                shape="Spp")+theme_classic()+geom_point(size=2)+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Successful")+
+  scale_shape_manual(values=c('square', 'circle'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+
+  ggtitle("PCoA Fungi")
+
+```
+
+>So microbial communities differ between succuessful and unsuccessful away sites-interesting....
+
+
+>What about them differs? Look at Funguild data...
+
+```{r funguild,  echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+guilds<- read.csv("DATA/SerpentineITS.guilds.csv")
+
+guilds<-separate(guilds, col=Taxonomy,into=c("x","x1", "x2", "x3","x4", "x5", "k", "k1", "p", "p1","c", "c1","o", "o1","f", "f1","g", "g1","s", "s1", "s2", "s3"))
+
+#filter out anything not fungi #3562
+ITS_Fungi<-filter(guilds,k1=="Fungi")%>%dplyr::select(-x,-x1,-x2, -x3,-x4,-x5, -k, -p, -c, -o,-f,-g,-s)
+#calculate only funguild assigned OTUs #2321
+ITS_Funguild<-subset(ITS_Fungi, Guild!="-")
+
+#Calculate pathogens
+path<-filter(ITS_Fungi, Guild=="Plant Pathogen")
+path2<-path[,c(1:149)]
+path2<-path2[, -1]
+path_by_sample<-path2 %>%gather(key = 'sample', value='value')%>%group_by(sample)%>%mutate(rich=ifelse(value>0, 1, 0))%>%
+  summarise(pathabund=sum(value), pathrich=sum(rich))
+
+#calculate mutualists 
+mut<-filter(ITS_Fungi, Guild=="Arbuscular Mycorrhizal")
+mut2<-mut[,c(1:149)]
+mut2<-mut2[, -1]
+mut_by_sample<-mut2 %>%gather(key = 'sample', value='value')%>%group_by(sample)%>%mutate(rich=ifelse(value>0, 1, 0))%>%
+  summarise(mutabund=sum(value), mutrich=sum(rich))
+
+funguild_abund_rich<-left_join(mut_by_sample, path_by_sample)
+funguild_abund_rich$mpratio<-funguild_abund_rich$mutabund/funguild_abund_rich$pathabund
+funguild_abund_rich$mprich<-funguild_abund_rich$mutrich/funguild_abund_rich$pathrich
+funguild_abund_rich<-rename(funguild_abund_rich,Code=sample)%>% left_join(metaf, .)%>%filter(!is.na(mpratio))
+
+ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()
+
+ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()
+
+
+```
+
+>So mutualist to pathogen ratios (abundance and richness) are higher at the successful Horkelia sites, but they don't differ between Horkelia and bare ground at the successful site, which suggests that the mutualists are not in *response* to Horkelia presence
+
+>let's test whether these are singificant 
+
+#ANOVAS
+```{r anovas, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#library(rcompanion)
+#transformTukey(funguild_abund_rich$mprich)#lambda=0.35
+
+aov_mprich<-(aov((mprich^0.35)~ Hsuccess*Spp, funguild_abund_rich))
+summary(aov_mprich)
+TukeyHSD(aov_mprich)
+
+#transformTukey(funguild_abund_rich$mpratio)#lambda 0.15
+
+aov_mpratio<-aov((mpratio^0.15)~ Hsuccess*Spp, funguild_abund_rich)
+summary(aov_mpratio)
+TukeyHSD(aov_mpratio)
+
+```
+>So M:P ratios were higher at the successful site and also higher in bare soils overall. 
+>M:P ratios are not different between Horkelia and bare ground at the sucessful site but at the unsuccessful site, Horkelia has lower M:P than bare soil. Also M:P in unsuccessful bare soil at was not different than in successful Horkelia soil, but is slightly lower than successful bare ground.  
+
+>Do taxa differ in these soils across a similar pattern?
+
+#Taxa plots 
+
+```{r plot phyla, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+#Bacteria---- 
+getPalette = colorRampPalette(brewer.pal(5, "Set1"))
+#group by phylum and remove NAs
+physeq.bac.nona.phylum = subset_taxa(physeq.bac, Phylum != "NA") 
+speciesPalette = getPalette(9)
+
+#split into 4 groups away Y success (H and bare), away N success (H and bare)
+physeq.awayY.phylum= subset_samples(physeq.bac.nona.phylum, Site=="5")
+physeq.awayN.phylum= subset_samples(physeq.bac.nona.phylum, Loc== "Away"& Site!="5")
+
+#Microbiome plots 
+ps.b.phy.awayY <- microbiome::aggregate_top_taxa(physeq.awayY.phylum,"Phylum", top =5)
+ps.b.phy.awayY.rel <- microbiome::transform(ps.b.phy.awayY, "compositional")
+
+ps.b.phy.awayN <- microbiome::aggregate_top_taxa(physeq.awayN.phylum,"Phylum", top =5)
+ps.b.phy.awayN.rel <- microbiome::transform(ps.b.phy.awayN, "compositional")
+
+plot.awayY <- microbiome::plot_composition(ps.b.phy.awayY.rel, 
+                                           group_by = "Spp")+ 
+  ggtitle("Away soils successful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme(axis.ticks.y =element_blank(),axis.text.x =element_blank(),
+        axis.text.y =element_blank(), plot.title = element_text(size = 10))
+
+plot.awayN <- microbiome::plot_composition(ps.b.phy.awayN.rel,
+                                           group_by = "Spp")+ 
+  ggtitle("Away soils unsuccessful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), axis.text.x =element_blank(), 
+        axis.text.y =element_blank(), plot.title = element_text(size = 10))
+
+grid.arrange(plot.awayN,plot.awayY)
+
+#Fungi ---- 
+getPalette = colorRampPalette(brewer.pal(5, "Set1"))
+#group by phylum and remove NAs
+physeq.fungi.nona.phylum = subset_taxa(physeq.fungi, Phylum != "NA") 
+#create color pallete 
+#speciesList = unique(tax_table(physeq.fungi.prune.nona.phylum)[,"Phylum"])
+speciesPalette = getPalette(9)
+#names(speciesPalette) = speciesList
+
+#split into 4 groups away Y success (H and bare), away N success (H and bare)
+physeq.awayY.phylum= subset_samples(physeq.fungi.nona.phylum, Site=="5")
+physeq.awayN.phylum= subset_samples(physeq.fungi.nona.phylum, Loc== "Away"& Site!="5")
+
+#Microbiome plots 
+ps.f.phy.awayY <- microbiome::aggregate_top_taxa(physeq.awayY.phylum,"Phylum", top =5)
+ps.f.phy.awayY.rel <- microbiome::transform(ps.f.phy.awayY, "compositional")
+
+ps.f.phy.awayN <- microbiome::aggregate_top_taxa(physeq.awayN.phylum,"Phylum", top =5)
+ps.f.phy.awayN.rel <- microbiome::transform(ps.f.phy.awayN, "compositional")
+
+plot.awayY <- microbiome::plot_composition(ps.f.phy.awayY.rel, 
+                                           group_by = "Spp")+ 
+  ggtitle("Away soils successful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme(axis.ticks.y =element_blank(),
+        axis.text.y =element_blank(),
+        axis.text.x =element_blank(), plot.title = element_text(size = 10))
+
+plot.awayN <- microbiome::plot_composition(ps.f.phy.awayN.rel,
+                                           group_by = "Spp")+ 
+  ggtitle("Away soils unsuccessful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), 
+        axis.text.x =element_blank(),
+         axis.text.y =element_blank(), plot.title = element_text(size = 10))
+
+grid.arrange(plot.awayN,plot.awayY)
+
+```
+
+>Somewhat hard to tell from the plots but let's run some tests for differential abundance of phlya 
+
+```{r anovas and krusal wallace tests, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#relative abundance tests----
+#Bacteria
+ps.bac.phy <- microbiome::aggregate_top_taxa(physeq.bac.nona.phylum, "Phylum", top = 5)
+bphyreads<-as.data.frame(t(abundances(ps.bac.phy)))
+bphyreads$Code<-row.names(bphyreads)
+bphyreads<-left_join(bphyreads, metab)
+
+shapiro.test(log(bphyreads$p__Acidobacteria))
+acido<-(aov((log(p__Acidobacteria)~ Hsuccess*Spp), bphyreads))
+summary(acido)
+TukeyHSD(acido)#yes H, bare < no bare 
+
+shapiro.test(log(bphyreads$p__Actinobacteria))
+actino<-aov(log(p__Actinobacteria)~ Hsuccess*Spp, bphyreads)
+summary(actino)
+TukeyHSD(actino)#yes bare > no bare 
+
+shapiro.test(log(bphyreads$p__Verrucomicrobia))
+verruco<-aov(log(p__Verrucomicrobia)~ Hsuccess*Spp, bphyreads)
+summary(verruco)
+TukeyHSD(verruco)#yes H, bare> no H, bare
+
+shapiro.test(log(bphyreads$p__Verrucomicrobia))
+verruco<-aov(log(p__Verrucomicrobia)~ Hsuccess*Spp, bphyreads)
+summary(verruco)
+TukeyHSD(verruco)#yes H, bare> no H, bare
+
+shapiro.test(log(bphyreads$p__Planctomycetes))
+plancto<-aov(log(p__Planctomycetes)~ Hsuccess*Spp, bphyreads)
+summary(plancto)
+TukeyHSD(plancto)#yes H, bare> no H, bare
+
+shapiro.test(log(bphyreads$p__Proteobacteria))
+proteo<-aov(log(p__Proteobacteria)~ Hsuccess*Spp, bphyreads)
+summary(proteo)
+TukeyHSD(proteo)#yes H < no bare, #yes bare< no H 
+
+#Fungi
+ps.fung.phy <- microbiome::aggregate_top_taxa(physeq.fungi.nona.phylum, "Phylum", top = 5)
+fphyreads<-as.data.frame(t(abundances(ps.fung.phy)))
+fphyreads$Code<-row.names(fphyreads)
+fphyreads<-left_join(fphyreads, metaf)
+
+#fungi data are not normally distributed run KW tests 
+kruskal.test(Ascomycota~ Hsuccess , fphyreads)#sig
+NemenyiTest(fphyreads$Ascomycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y>N
+kruskal.test(Ascomycota~ successx , fphyreads)#sig
+NemenyiTest(fphyreads$Ascomycota, as.factor(fphyreads$successx), dist="tukey") #yes H, bare > no bare 
+
+kruskal.test(Basidiomycota~ Hsuccess , fphyreads)#NS
+kruskal.test(Basidiomycota~ successx , fphyreads)#sig
+NemenyiTest(fphyreads$Basidiomycota, as.factor(fphyreads$successx), dist="tukey") #no bare > no H 
+
+kruskal.test(Glomeromycota~ Hsuccess, fphyreads)#sig
+NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y>N
+kruskal.test(Glomeromycota~ successx, fphyreads)#sig
+NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$successx), dist="tukey") #Yes H and bare > no H 
+ #yes bare > no bare  
+
+kruskal.test(Mucoromycota~ Hsuccess , fphyreads)#sig
+NemenyiTest(fphyreads$Mucoromycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y > N
+kruskal.test(Mucoromycota~ successx , fphyreads)#sig
+NemenyiTest(fphyreads$Mucoromycota, as.factor(fphyreads$successx), dist="tukey") #
+
+kruskal.test(Mortierellomycota~ Hsuccess , fphyreads)#sig
+NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y < N
+
+```
+
+>For Bacteria,  successful Horkelia away sites have lower Acidobacteria, but higher Verrucomicrobia and Planctomyctes than unsuccussful away sites. All of these phyla are associated with slower C mineralization i.e. oligotrophic strategy (Ho et al 2017 FEMS), so not sure if this tells us anything... 
+
+>For Fungi, successful Horkelia away sites have lower Mortierellomycota, but higher Ascomycota, Glomeromycota and Mucoromycota than unsuccussful away sites. Glomeromycota (AMF) may be important for the establishment and growth of Horkelia seedlings. This confirms the pattern we see in M:P ratios. 
+
+>Let's zoom in on the Glomeromycota results 
+
+```{r, KW tests, echo=FALSE, message=FALSE, warning=FALSE}
+kruskal.test(Glomeromycota~ Hsuccess, fphyreads)#sig
+NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y>N
+kruskal.test(Glomeromycota~ successx, fphyreads)#sig
+NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$successx), dist="tukey") #Yes H and bare > no H 
+ #yes bare > no bare  
+```
+
+>So again this confirms that Glomeromycota (AMF) were higher in successful Horkelia sites than non-successful Horkelia sites. This is true for both Bare and Horeklia soils, suggesting the AMF were there before (and thus contributed to) the Horkelia seedling establishment. 
+
