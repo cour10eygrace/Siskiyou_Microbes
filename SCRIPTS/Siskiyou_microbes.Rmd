@@ -99,7 +99,7 @@ plot_ordination(physeq.fungi.sub,fung.ord.sub, color = "Loc",
 >Now let's consider differences between away sites where Horkelia was and was not successful
 
 ```{r subset data2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
-#For site 8 there was only one sample, so it was probably dropped because we can’t compare it to anything statistically.
+#For site 8 there was only one sample, so it was dropped because we can’t compare it to anything statistically.
 physeq.bac.away<-subset_samples(physeq.bac, Loc=="Away")#& Site!="8") 
 physeq.fungi.away<-subset_samples(physeq.fungi, Loc=="Away")#& Site!="8") 
 
