@@ -24,7 +24,7 @@ library(tidyverse)
 library(rngtools)
 
 
-#load datasets 
+#load stored phyloseq objects 
 #Bacteria
 load("DATA/physeq.bac.Rdata")
 
@@ -379,4 +379,18 @@ NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$successx), dist="tukey"
 ```
 
 >So again this confirms that Glomeromycota (AMF) were higher in successful Horkelia sites than non-successful Horkelia sites. This is true for both Bare and Horeklia soils, suggesting the AMF were there before (and thus contributed to) the Horkelia seedling establishment. 
+
+```{r, Appendix1, echo=FALSE,include=FALSE, message=FALSE, warning=FALSE}
+#calculate relative abundances of major phlya across all samples 
+ps.bac.phy <- microbiome::aggregate_top_taxa(physeq.bac.nona.phylum, "Phylum", top = 10)
+ps.bac.phy.rel <- microbiome::transform(ps.bac.phy, "compositional")
+bacterial_rel<-as.data.frame(ps.bac.phy.rel@otu_table)
+bacterial_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
+
+ps.f.phy <- microbiome::aggregate_top_taxa(physeq.fungi.nona.phylum, "Phylum", top = 7)
+ps.f.phy.rel <- microbiome::transform(ps.f.phy, "compositional")
+fungal_rel<-as.data.frame(ps.f.phy.rel@otu_table)
+fungal_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
+
+```
 

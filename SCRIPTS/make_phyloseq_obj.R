@@ -24,6 +24,9 @@ OTUB = otu_table(otumatb, taxa_are_rows = TRUE)
 #taxa 
 taxb<-otub[, c(1:8)]#pull out tax 
 taxb$Row.names<-NULL
+#determine % unassigned 
+unassigned<-subset(taxb, Domain=="Unassigned")
+(nrow(unassigned)/nrow(taxb))*100
 #PULL OUT ONLY BACTERIA 
 taxb<-filter(taxb, Domain=="k__Bacteria")
 #make martrix
@@ -58,6 +61,10 @@ OTU = otu_table(otumat, taxa_are_rows = TRUE)
 tax<-read.csv("DATA/SerpentineITS.taxonomy.fix.csv")
 row.names(tax)<-tax$X
 tax$X<-NULL
+#determine % unassigned 
+unassigned<-subset(tax, is.na(Kingdom))
+(nrow(unassigned)/nrow(tax))*100
+
 #PULL OUT ONLY FUNGI
 tax<-filter(tax, Kingdom=="Fungi")
 #make matrix 
