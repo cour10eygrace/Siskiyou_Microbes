@@ -317,10 +317,6 @@ verruco<-aov(log(p__Verrucomicrobia)~ Hsuccess*Spp, bphyreads)
 summary(verruco)
 TukeyHSD(verruco)#yes H, bare> no H, bare
 
-shapiro.test(log(bphyreads$p__Verrucomicrobia))
-verruco<-aov(log(p__Verrucomicrobia)~ Hsuccess*Spp, bphyreads)
-summary(verruco)
-TukeyHSD(verruco)#yes H, bare> no H, bare
 
 shapiro.test(log(bphyreads$p__Planctomycetes))
 plancto<-aov(log(p__Planctomycetes)~ Hsuccess*Spp, bphyreads)
@@ -361,7 +357,8 @@ NemenyiTest(fphyreads$Mucoromycota, as.factor(fphyreads$successx), dist="tukey")
 
 kruskal.test(Mortierellomycota~ Hsuccess , fphyreads)#sig
 NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y < N
-
+kruskal.test(Mortierellomycota~ successx , fphyreads)#sig
+NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$successx), dist="tukey") #Y < N
 ```
 
 >For Bacteria,  successful Horkelia away sites have lower Acidobacteria, but higher Verrucomicrobia and Planctomyctes than unsuccussful away sites. All of these phyla are associated with slower C mineralization i.e. oligotrophic strategy (Ho et al 2017 FEMS), so not sure if this tells us anything... 
