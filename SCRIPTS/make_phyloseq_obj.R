@@ -84,7 +84,7 @@ sort(sample_sums(physeq.fungi))#lowest is 22822
 
 physeq.fungi.rare=ps.rarefied = rarefy_even_depth(physeq.fungi, 
           sample.size=min(sample_sums(physeq.fungi)), replace=F)
-sample_sums(physeq.fungi.rare)#2282 2reads per sample 
+sample_sums(physeq.fungi.rare)#22822 reads per sample 
 
 physeq.fungi<-physeq.fungi.rare
 save(physeq.fungi, metaf, file="DATA/physeq.fungi.Rdata")
