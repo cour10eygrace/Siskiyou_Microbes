@@ -1,6 +1,7 @@
 #make phyloseq objects
 library(phyloseq)
 library(tidyr)
+library(vegan)
 
 #BACTERIA
 #metadata
@@ -76,5 +77,14 @@ TAX = tax_table(taxmat)
 physeq.fungi = phyloseq(OTU,TAX, metafx)
 #remove singletons 
 physeq.fungi = prune_taxa(taxa_sums(physeq.fungi) > 1, physeq.fungi)
-save(physeq.fungi, metaf, file="DATA/physeq.fungi.Rdata")
 
+#rarefy fungi 
+#rarefy to 100% of the miniumum sample depth in the dataset 
+sort(sample_sums(physeq.fungi))#lowest is 22822 
+
+physeq.fungi.rare=ps.rarefied = rarefy_even_depth(physeq.fungi, 
+          sample.size=min(sample_sums(physeq.fungi)), replace=F)
+sample_sums(physeq.fungi.rare)#2282 2reads per sample 
+
+physeq.fungi<-physeq.fungi.rare
+save(physeq.fungi, metaf, file="DATA/physeq.fungi.Rdata")
