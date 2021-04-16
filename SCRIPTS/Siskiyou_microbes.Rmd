@@ -25,6 +25,9 @@ library(rngtools)
 
 
 #load stored phyloseq objects 
+#update to where you saved your.RData files from the make phyloseq obj.R script 
+setwd("C:/Users/court/Documents/Git/Siskiyou_Microbes")
+
 #Bacteria
 load("DATA/physeq.bac.Rdata")
 
@@ -47,6 +50,8 @@ metafsub<-subset(metaf, Site=="1"| Site=="9"|Site=="10"| Site=="5")
 metabaway<-subset(metab,  Site=="5")
 metafaway<-subset(metaf,  Site=="5")
 
+metafsub<-subset(metafsub, Code!="W05X05XA" & Code!="W10X10XA")#remove 2 samples after rarefying fungi 
+metafaway<-subset(metafaway, Code!="W05X05XA")#remove 1 sample after rarefying fungi  
 ```
 
 ##Run permanovas
@@ -106,7 +111,7 @@ physeq.fungi.away<-subset_samples(physeq.fungi, Loc=="Away")#& Site!="8")
 metabaway<-subset(metab, Loc=="Away")#& Site!="8") 
 metafaway<-subset(metaf, Loc=="Away") #& Site!="8") 
 metafaway<-subset(metafaway, Code!="W06N05HA"&
-Code!="W07N04HC"& Code!="W07N06XA")#remove missing samples 
+Code!="W07N04HC"& Code!="W07N06XA"& Code!="W05X05XA") #remove missing samples 
 ```
 
 
@@ -155,6 +160,7 @@ plot_ordination(physeq.fungi.away,fung.ord.away, color="Hsuccess",
 >What about them differs? Look at Funguild data...
 
 ```{r funguild,  echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+setwd("C:/Users/court/Documents/Git/Siskiyou_Microbes")
 guilds<- read.csv("DATA/SerpentineITS.guilds.csv")
 
 guilds<-separate(guilds, col=Taxonomy,into=c("x","x1", "x2", "x3","x4", "x5", "k", "k1", "p", "p1","c", "c1","o", "o1","f", "f1","g", "g1","s", "s1", "s2", "s3"))
@@ -183,10 +189,12 @@ funguild_abund_rich$mpratio<-funguild_abund_rich$mutabund/funguild_abund_rich$pa
 funguild_abund_rich$mprich<-funguild_abund_rich$mutrich/funguild_abund_rich$pathrich
 funguild_abund_rich<-rename(funguild_abund_rich,Code=sample)%>% left_join(metaf, .)%>%filter(!is.na(mpratio))
 
+#update to retain only sites in permanovas
+funguild_abund_rich<-subset(funguild_abund_rich,Site=="1"|Site=="10"|Site=="9"|Site=="5")
+
 ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()
 
 ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()
-
 
 ```
 
@@ -197,15 +205,15 @@ ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + g
 #ANOVAS
 ```{r anovas, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
 #library(rcompanion)
-#transformTukey(funguild_abund_rich$mprich)#lambda=0.35
+#transformTukey(funguild_abund_rich$mprich)#lambda=0.25
 
-aov_mprich<-(aov((mprich^0.35)~ Hsuccess*Spp, funguild_abund_rich))
+aov_mprich<-(aov((mprich^0.25)~ Hsuccess*Spp, funguild_abund_rich))
 summary(aov_mprich)
 TukeyHSD(aov_mprich)
 
-#transformTukey(funguild_abund_rich$mpratio)#lambda 0.15
+#transformTukey(funguild_abund_rich$mpratio)#lambda 0.125
 
-aov_mpratio<-aov((mpratio^0.15)~ Hsuccess*Spp, funguild_abund_rich)
+aov_mpratio<-aov((mpratio^0.125)~ Hsuccess*Spp, funguild_abund_rich)
 summary(aov_mpratio)
 TukeyHSD(aov_mpratio)
 
@@ -294,9 +302,12 @@ grid.arrange(plot.awayN,plot.awayY)
 
 >Somewhat hard to tell from the plots but let's run some tests for differential abundance of phlya 
 
-```{r anovas and krusal wallace tests, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r anovas and krusal wallace tests, echo=FALSE, message=FALSE, warning=FALSE, include=T}
 #relative abundance tests----
 #Bacteria
+physeq.bac.nona.phylum= subset_samples(physeq.bac.nona.phylum, Site=="5"|
+                                           Site=="1"|Site=="10"|Site=="9")
+
 ps.bac.phy <- microbiome::aggregate_top_taxa(physeq.bac.nona.phylum, "Phylum", top = 5)
 bphyreads<-as.data.frame(t(abundances(ps.bac.phy)))
 bphyreads$Code<-row.names(bphyreads)
@@ -329,6 +340,9 @@ summary(proteo)
 TukeyHSD(proteo)#yes H < no bare, #yes bare< no H 
 
 #Fungi
+physeq.fungi.nona.phylum= subset_samples(physeq.fungi.nona.phylum, Site=="5"|
+                                           Site=="1"|Site=="10"|Site=="9")
+
 ps.fung.phy <- microbiome::aggregate_top_taxa(physeq.fungi.nona.phylum, "Phylum", top = 5)
 fphyreads<-as.data.frame(t(abundances(ps.fung.phy)))
 fphyreads$Code<-row.names(fphyreads)
@@ -341,7 +355,7 @@ kruskal.test(Ascomycota~ successx , fphyreads)#sig
 NemenyiTest(fphyreads$Ascomycota, as.factor(fphyreads$successx), dist="tukey") #yes H, bare > no bare 
 
 kruskal.test(Basidiomycota~ Hsuccess , fphyreads)#NS
-kruskal.test(Basidiomycota~ successx , fphyreads)#sig
+kruskal.test(Basidiomycota~ successx , fphyreads)#NS
 NemenyiTest(fphyreads$Basidiomycota, as.factor(fphyreads$successx), dist="tukey") #no bare > no H 
 
 kruskal.test(Glomeromycota~ Hsuccess, fphyreads)#sig
@@ -355,10 +369,9 @@ NemenyiTest(fphyreads$Mucoromycota, as.factor(fphyreads$Hsuccess), dist="tukey")
 kruskal.test(Mucoromycota~ successx , fphyreads)#sig
 NemenyiTest(fphyreads$Mucoromycota, as.factor(fphyreads$successx), dist="tukey") #
 
-kruskal.test(Mortierellomycota~ Hsuccess , fphyreads)#sig
-NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$Hsuccess), dist="tukey") #Y < N
-kruskal.test(Mortierellomycota~ successx , fphyreads)#sig
-NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$successx), dist="tukey") #Y < N
+kruskal.test(Mortierellomycota~ Hsuccess , fphyreads)#NS
+NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$Hsuccess), dist="tukey") kruskal.test(Mortierellomycota~ successx , fphyreads)#NS
+NemenyiTest(fphyreads$Mortierellomycota, as.factor(fphyreads$successx), dist="tukey") 
 ```
 
 >For Bacteria,  successful Horkelia away sites have lower Acidobacteria, but higher Verrucomicrobia and Planctomyctes than unsuccussful away sites. All of these phyla are associated with slower C mineralization i.e. oligotrophic strategy (Ho et al 2017 FEMS), so not sure if this tells us anything... 
@@ -377,17 +390,24 @@ NemenyiTest(fphyreads$Glomeromycota, as.factor(fphyreads$successx), dist="tukey"
 
 >So again this confirms that Glomeromycota (AMF) were higher in successful Horkelia sites than non-successful Horkelia sites. This is true for both Bare and Horeklia soils, suggesting the AMF were there before (and thus contributed to) the Horkelia seedling establishment. 
 
-```{r, Appendix1, echo=FALSE,include=FALSE, message=FALSE, warning=FALSE}
+ 
+>Calculate composition of entire community for results 
+
+```{r,calculate taxa, echo=FALSE,include=FALSE, message=FALSE, warning=FALSE}
 #calculate relative abundances of major phlya across all samples 
 ps.bac.phy <- microbiome::aggregate_top_taxa(physeq.bac.nona.phylum, "Phylum", top = 10)
 ps.bac.phy.rel <- microbiome::transform(ps.bac.phy, "compositional")
 bacterial_rel<-as.data.frame(ps.bac.phy.rel@otu_table)
-bacterial_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
+bacterial_rel<-bacterial_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
 
 ps.f.phy <- microbiome::aggregate_top_taxa(physeq.fungi.nona.phylum, "Phylum", top = 7)
 ps.f.phy.rel <- microbiome::transform(ps.f.phy, "compositional")
 fungal_rel<-as.data.frame(ps.f.phy.rel@otu_table)
-fungal_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
+fungal_rel<-fungal_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
+```
 
+```{r Appendix1}
+kable(bacterial_rel)
+kable(fungal_rel)
 ```
 
