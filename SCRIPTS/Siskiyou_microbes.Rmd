@@ -60,42 +60,64 @@ metafaway<-subset(metafaway, Code!="W05X05XA")#remove 1 sample after rarefying f
 #Bacteria
 bac_bray_sub<-distance(physeq.bac.sub, method = "bray")#slow
 bac_bray_sub<-as.matrix(bac_bray_sub)
-vegan::adonis(bac_bray_sub~Loc*Spp, data=metabsub, permutations = 999)# Loc sig 
+vegan::adonis2(bac_bray_sub~Loc*Spp, data=metabsub, permutations = 999)# Loc sig 
 
 #Fungi 
 fungi_bray_sub<-distance(physeq.fungi.sub, method = "bray")
 fungi_bray_sub<-as.matrix(fungi_bray_sub)
-vegan::adonis(fungi_bray_sub~Loc*Spp, data=metafsub, permutations = 999)#all sig
+vegan::adonis2(fungi_bray_sub~Loc*Spp, data=metafsub, permutations = 999)#all sig
 
 #now test away soils only for H vs bare 
 fungi_bray_away<-distance(physeq.fungi.away, method = "bray")
 fungi_bray_away<-as.matrix(fungi_bray_away)
 
-vegan::adonis(fungi_bray_away~Spp, data=metafaway, permutations = 999)#not different 
+vegan::adonis2(fungi_bray_away~Spp, data=metafaway, permutations = 999)#not different 
 
 ```
 
 ##Plot ordinations
 
 ```{r Ordinations, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
+
+# pull out legend function
+get_only_legend <- function(plot) { 
+    
+# get tabular interpretation of plot 
+plot_table <- ggplot_gtable(ggplot_build(plot))  
+    
+#  Mark only legend in plot 
+legend_plot <- which(sapply(plot_table$grobs, function(x) x$name) == "guide-box")  
+                              
+# extract legend 
+legend <- plot_table$grobs[[legend_plot]] 
+                              
+# return legend 
+return(legend)  
+}
+
+
 #Bacteria
 bac.ord.sub<-ordinate(physeq.bac.sub, "PCoA", "bray")
-plot_ordination(physeq.bac.sub,bac.ord.sub, color = "Loc",
+fig2b<-plot_ordination(physeq.bac.sub,bac.ord.sub, color = "Loc",
                 shape="Spp")+theme_classic()+geom_point(size=2)+
-  scale_color_manual(values=c('darkgrey', 'black'), name="Sites")+
+  scale_color_manual(values=c('black', "darkgrey"), name="Site", 
+                    labels = c("Away successful", "Home"))+
   scale_shape_manual(values=c('square', 'circle'), name="Source", 
-                     labels = c("Horkelia","Bare ground"))+
-  ggtitle("PCoA Bacteria")
+                labels = c("Horkelia","Bare ground")) 
 
+legend<-get_only_legend(fig2b) #pull out legend
+
+fig2b<-fig2b+theme( legend.position = "none" ) #rewrite w/ no legend  
 #Fungi 
 fung.ord.sub<-ordinate(physeq.fungi.sub, "PCoA", "bray")
 
-plot_ordination(physeq.fungi.sub,fung.ord.sub, color = "Loc",
+fig2a<-plot_ordination(physeq.fungi.sub,fung.ord.sub, color = "Loc", 
                 shape="Spp")+theme_classic()+geom_point(size=2)+
-  scale_color_manual(values=c('darkgrey', 'black'), name="Sites")+
+  scale_color_manual(values=c('black', 'darkgrey'), name="Site")+  
+                      #labels = c("Away successful", "Home"))+
   scale_shape_manual(values=c('square', 'circle'), name="Source", 
                      labels = c("Horkelia","Bare ground"))+
-  ggtitle("PCoA Fungi")
+                   theme( legend.position = "none" )
 ```
 
 >So microbial communities differ between home and away for Horkelia soils for Bacteria and fungi and between Horkelia and bare for fungi but not between Horkleia and bare at away sites. 
@@ -121,12 +143,12 @@ Code!="W07N04HC"& Code!="W07N06XA"& Code!="W05X05XA") #remove missing samples
 #Bacteria
 bac_bray_away2<-distance(physeq.bac.away, method = "bray")#slow
 bac_bray_away2<-as.matrix(bac_bray_away2)
-vegan::adonis(bac_bray_away2~Hsuccess*Spp, data=metabaway, permutations = 999)
+vegan::adonis2(bac_bray_away2~Hsuccess*Spp, data=metabaway, permutations = 999)
 
 #Fungi 
 fungi_bray_away2<-distance(physeq.fungi.away, method = "bray")
 fungi_bray_away2<-as.matrix(fungi_bray_away2)
-vegan::adonis(fungi_bray_away2~Hsuccess*Spp, data=metafaway, permutations = 999)
+vegan::adonis2(fungi_bray_away2~Hsuccess*Spp, data=metafaway, permutations = 999)
 
 ```
 
@@ -136,25 +158,40 @@ vegan::adonis(fungi_bray_away2~Hsuccess*Spp, data=metafaway, permutations = 999)
 ```{r Ordinations2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, cache=TRUE}
 #Bacteria
 bac.ord.away<-ordinate(physeq.bac.away, "PCoA", "bray")#slow
-plot_ordination(physeq.bac.away,bac.ord.away, color = "Hsuccess",
+
+fig2d<-plot_ordination(physeq.bac.away,bac.ord.away, color = "Hsuccess", 
                 shape="Spp")+theme_classic()+geom_point(size=2)+
-  scale_color_manual(values=c('darkgrey', 'black'), name="Successful")+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Site", 
+                     labels = c("Away unsuccessful","Away successful"))+
   scale_shape_manual(values=c('square', 'circle'), name="Source", 
-                     labels = c("Horkelia","Bare ground"))+
-  ggtitle("PCoA Bacteria")
+                    labels = c("Horkelia","Bare ground"))+
+      guides(color = guide_legend(order = 2),
+         shape = guide_legend(order = 1))
+
+
+legend2<-get_only_legend(fig2d) #pull out legend
+fig2d<-fig2d+ theme( legend.position = "none" ) #rewrite w/ no legend
 
 #Fungi 
 fung.ord.away<-ordinate(physeq.fungi.away, "PCoA", "bray")
-plot_ordination(physeq.fungi.away,fung.ord.away, color="Hsuccess",
+fig2c<-plot_ordination(physeq.fungi.away,fung.ord.away, color="Hsuccess",
                 shape="Spp")+theme_classic()+geom_point(size=2)+
-  scale_color_manual(values=c('darkgrey', 'black'), name="Successful")+
+  scale_color_manual(values=c('darkgrey', 'black'), name="Site")+
   scale_shape_manual(values=c('square', 'circle'), name="Source", 
                      labels = c("Horkelia","Bare ground"))+
-  ggtitle("PCoA Fungi")
+  theme( legend.position = "none" ) #rewrite w/ no legend
+
+
+#plot 4 panel fig 2
+pdf("Fig2.pdf", width = 12, height = 10)
+grid.arrange(fig2a, fig2b, legend, fig2c, fig2d, legend2, ncol=3)
+dev.off()
+
 
 ```
 
->So microbial communities differ between succuessful and unsuccessful away sites-interesting....
+
+>So microbial communities differ between succuessful and unsuccessful away sites as well 
 
 
 >What about them differs? Look at Funguild data...
