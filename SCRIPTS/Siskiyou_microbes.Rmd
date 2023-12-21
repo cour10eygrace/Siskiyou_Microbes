@@ -229,9 +229,18 @@ funguild_abund_rich<-rename(funguild_abund_rich,Code=sample)%>% left_join(metaf,
 #update to retain only sites in permanovas
 funguild_abund_rich<-subset(funguild_abund_rich,Site=="1"|Site=="10"|Site=="9"|Site=="5")
 
-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()
+fig3a<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
+  
 
-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()
+fig3b<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()+xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
+
+#plot 2 panel fig3
+pdf("Fig3.pdf", width = 12, height = 8)
+ggpubr::ggarrange(fig3a, fig3b, common.legend = T, legend="right")
+dev.off()
+
 
 ```
 
@@ -263,7 +272,7 @@ TukeyHSD(aov_mpratio)
 #Taxa plots 
 
 ```{r plot phyla, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
-
+#MUST RUN R VERSION 4.0.3 for this!!! 
 #Bacteria---- 
 getPalette = colorRampPalette(brewer.pal(5, "Set1"))
 #group by phylum and remove NAs
@@ -298,13 +307,10 @@ plot.awayN <- microbiome::plot_composition(ps.b.phy.awayN.rel,
 grid.arrange(plot.awayN,plot.awayY)
 
 #Fungi ---- 
-getPalette = colorRampPalette(brewer.pal(5, "Set1"))
 #group by phylum and remove NAs
 physeq.fungi.nona.phylum = subset_taxa(physeq.fungi, Phylum != "NA") 
 #create color pallete 
 #speciesList = unique(tax_table(physeq.fungi.prune.nona.phylum)[,"Phylum"])
-speciesPalette = getPalette(9)
-#names(speciesPalette) = speciesList
 
 #split into 4 groups away Y success (H and bare), away N success (H and bare)
 physeq.awayY.phylum= subset_samples(physeq.fungi.nona.phylum, Site=="5")
@@ -447,4 +453,110 @@ fungal_rel<-fungal_rel%>%mutate(tot=rowMeans(.))%>%select(tot)
 kable(bacterial_rel)
 kable(fungal_rel)
 ```
+
+
+
+```{r fig 4 plot}
+getPalette = colorRampPalette(brewer.pal(5, "Set1"))
+speciesPalette = getPalette(9)
+
+#bacteria
+physeq.bac.nona.phylum = subset_taxa(physeq.bac, Phylum != "NA") 
+
+taxa_names(physeq.bac.nona.phylum) <- gsub(taxa_names(physeq.bac.nona.phylum), pattern = "p_", replacement = "")
+
+#remove phylum prefix 
+ps<-physeq.bac.nona.phylum
+tax_table(ps) <- gsub(tax_table(ps), pattern = "p_", replacement = "")
+
+#Microbiome plots 
+plotdatB <- microbiome::aggregate_top_taxa(ps,"Phylum", top =8)
+plotdatB.rel <- microbiome::transform(plotdatB, "compositional")
+
+plotdatB.relH<-subset_samples(plotdatB.rel, Site=="1"|Site=="9"|Site=="10") 
+plotdatB.relAS<-subset_samples(plotdatB.rel, Site=="5")
+plotdatB.relAU<-subset_samples(plotdatB.rel, Site=="3"|Site=="6"|Site=="7"|Site=="8"|Site=="11")
+
+#change other value to grey 
+speciesPalette[9]<-"#666666"
+
+fig4b1<-microbiome::plot_composition(plotdatB.relH,
+                                           average_by = "Site")+ 
+  ggtitle("Home soils") + xlab(" ")+ ylab("Relative abundance")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( #axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         #axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10), 
+          legend.position = "none")
+fig4b2<-microbiome::plot_composition(plotdatB.relAU,
+                                           average_by = "Site")+ 
+  ggtitle("Away soils unsuccessful") + xlab(" ")+ ylab("")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10), 
+        legend.position = "none")
+
+fig4b3<-microbiome::plot_composition(plotdatB.relAS,
+                                           average_by = "Site")+ 
+  ggtitle("Away soils successful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10))
+
+#fungi
+physeq.fungi.nona.phylum = subset_taxa(physeq.fungi, Phylum != "NA") 
+
+#Microbiome plots 
+plotdatF <- microbiome::aggregate_top_taxa(physeq.fungi.nona.phylum,"Phylum", top =5)
+plotdatF.rel <- microbiome::transform(plotdatF, "compositional")
+
+plotdatF.relH<-subset_samples(plotdatF.rel, Site=="1"|Site=="9"|Site=="10") 
+plotdatF.relAS<-subset_samples(plotdatF.rel, Site=="5")
+plotdatF.relAU<-subset_samples(plotdatF.rel, Site=="3"|Site=="6"|Site=="7"|Site=="8"|Site=="11")
+
+#change other value to grey 
+speciesPalette[6]<-"#666666"
+
+fig4a1<-microbiome::plot_composition(plotdatF.relH,
+                                           average_by = "Site")+ 
+  ggtitle("Home soils") + xlab(" ")+ ylab("Relative abundance")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( #axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         #axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10), 
+          legend.position = "none")
+fig4a2<-microbiome::plot_composition(plotdatF.relAU,
+                                           average_by = "Site")+ 
+  ggtitle("Away soils unsuccessful") + xlab(" ")+ ylab("")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10), 
+        legend.position = "none")
+
+fig4a3<-microbiome::plot_composition(plotdatF.relAS,
+                                           average_by = "Site")+ 
+  ggtitle("Away soils successful") + xlab(" ")+ ylab(" ")+
+  scale_fill_manual(values= speciesPalette)+ 
+  theme( axis.ticks.y =element_blank(), 
+        #axis.text.x =element_blank(),
+         axis.text.y =element_blank(), 
+          plot.title = element_text(size = 10))
+
+
+pdf("Fig4.pdf", width = 12, height = 16)
+ggpubr::ggarrange(fig4a1, fig4a2, fig4a3, fig4b1, fig4b2, fig4b3, ncol=3, nrow = 2)
+dev.off()
+
+
+```
+
+
 
