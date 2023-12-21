@@ -551,7 +551,7 @@ fig4a3<-microbiome::plot_composition(plotdatF.relAS,
           plot.title = element_text(size = 10))
 
 
-pdf("Fig4.pdf", width = 12, height = 16)
+pdf("Fig4.pdf", width = 8, height = 12)
 ggpubr::ggarrange(fig4a1, fig4a2, fig4a3, fig4b1, fig4b2, fig4b3, ncol=3, nrow = 2)
 dev.off()
 
