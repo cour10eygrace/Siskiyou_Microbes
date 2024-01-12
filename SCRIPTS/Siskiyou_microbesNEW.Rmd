@@ -197,10 +197,11 @@ dev.off()
 >What about them differs? Look at Funguild data...
 
 ```{r funguild,  echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
-setwd("C:/Users/court/Documents/Git/Siskiyou_Microbes")
+#setwd("C:/Users/court/Documents/Git/Siskiyou_Microbes")
+setwd("C:/Users/court/Documents/Github_repos/Siskiyou_Microbes")
 guilds<- read.csv("DATA/SerpentineITS.guilds.csv")
 
-guilds<-separate(guilds, col=Taxonomy,into=c("x","x1", "x2", "x3","x4", "x5", "k", "k1", "p", "p1","c", "c1","o", "o1","f", "f1","g", "g1","s", "s1", "s2", "s3"))
+guilds<-tidyr::separate(guilds, col=Taxonomy,into=c("x","x1", "x2", "x3","x4", "x5", "k", "k1", "p", "p1","c", "c1","o", "o1","f", "f1","g", "g1","s", "s1", "s2", "s3"))
 
 #filter out anything not fungi #3562
 ITS_Fungi<-filter(guilds,k1=="Fungi")%>%dplyr::select(-x,-x1,-x2, -x3,-x4,-x5, -k, -p, -c, -o,-f,-g,-s)
@@ -211,14 +212,14 @@ ITS_Funguild<-subset(ITS_Fungi, Guild!="-")
 path<-filter(ITS_Fungi, Guild=="Plant Pathogen")
 path2<-path[,c(1:149)]
 path2<-path2[, -1]
-path_by_sample<-path2 %>%gather(key = 'sample', value='value')%>%group_by(sample)%>%mutate(rich=ifelse(value>0, 1, 0))%>%
-  summarise(pathabund=sum(value), pathrich=sum(rich))
+path_by_sample<-path2 %>%tidyr::gather(key = 'sample', value='value')%>%group_by(sample)%>%dplyr::mutate(rich=ifelse(value>0, 1, 0))%>%
+  dplyr::summarise(pathabund=sum(value), pathrich=sum(rich))
 
 #calculate mutualists 
 mut<-filter(ITS_Fungi, Guild=="Arbuscular Mycorrhizal")
 mut2<-mut[,c(1:149)]
 mut2<-mut2[, -1]
-mut_by_sample<-mut2 %>%gather(key = 'sample', value='value')%>%group_by(sample)%>%mutate(rich=ifelse(value>0, 1, 0))%>%
+mut_by_sample<-mut2 %>%tidyr::gather(key = 'sample', value='value')%>%group_by(sample)%>%mutate(rich=ifelse(value>0, 1, 0))%>%
   summarise(mutabund=sum(value), mutrich=sum(rich))
 
 funguild_abund_rich<-left_join(mut_by_sample, path_by_sample)
@@ -226,8 +227,8 @@ funguild_abund_rich$mpratio<-funguild_abund_rich$mutabund/funguild_abund_rich$pa
 funguild_abund_rich$mprich<-funguild_abund_rich$mutrich/funguild_abund_rich$pathrich
 funguild_abund_rich<-rename(funguild_abund_rich,Code=sample)%>% left_join(metaf, .)%>%filter(!is.na(mpratio))
 
-#update to retain only sites in permanovas
-funguild_abund_rich<-subset(funguild_abund_rich,Site=="1"|Site=="10"|Site=="9"|Site=="5")
+#update to retain only sites in permanovas--REMOVE THIS!! 12/21/23
+#funguild_abund_rich<-subset(funguild_abund_rich,Site=="1"|Site=="10"|Site=="9"|Site=="5")
 
 fig3a<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
                      labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
@@ -236,11 +237,30 @@ fig3a<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=S
 fig3b<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()+xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
                      labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
 
+       
 #plot 2 panel fig3
 pdf("Fig3.pdf", width = 12, height = 8)
 ggpubr::ggarrange(fig3a, fig3b, common.legend = T, legend="right")
 dev.off()
 
+
+#do home and away soils differ?
+ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich))) + facet_wrap(~Loc)+ geom_boxplot()+theme_classic()+xlab("Site")+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source")+ ylab("mutualist:pathogen")
+#make new factor 
+funguild_abund_rich<-mutate(funguild_abund_rich, homeaway=ifelse(Site=="1"|Site=="9"|Site=="10", "home", "away"))%>%
+  mutate(success=case_when(Site=="5"&homeaway=="away"~"AwaySuccessful",
+                           Site!="5"&homeaway=="away"~"AwayUnsuccessful", 
+                           TRUE~"Home"))
+
+ggplot(data=funguild_abund_rich, aes(x = success, y=log(mprich))) + geom_boxplot()+theme_classic()+xlab("Site")+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source")+ ylab("mutualist:pathogen") #Make Fig S2
+
+aov_mpratio_home<-aov(log(mpratio+1)~ success, funguild_abund_rich)
+summary(aov_mpratio_home)
+TukeyHSD(aov_mpratio_home)
+
+aov_mprich_home<-aov(log(mprich+1)~ success, funguild_abund_rich)
+summary(aov_mprich_home)
+TukeyHSD(aov_mprich_home)
 
 ```
 
@@ -253,13 +273,14 @@ dev.off()
 #library(rcompanion)
 #transformTukey(funguild_abund_rich$mprich)#lambda=0.25
 
-aov_mprich<-(aov((mprich^0.25)~ Hsuccess*Spp, funguild_abund_rich))
+hist(log(funguild_abund_rich$mprich+1))
+aov_mprich<-aov(log(mprich+1)~ Hsuccess*Spp, funguild_abund_rich)
 summary(aov_mprich)
 TukeyHSD(aov_mprich)
 
 #transformTukey(funguild_abund_rich$mpratio)#lambda 0.125
-
-aov_mpratio<-aov((mpratio^0.125)~ Hsuccess*Spp, funguild_abund_rich)
+hist(log(funguild_abund_rich$mpratio+1))
+aov_mpratio<-aov(log(mpratio+1)~ Hsuccess*Spp, funguild_abund_rich)
 summary(aov_mpratio)
 TukeyHSD(aov_mpratio)
 
