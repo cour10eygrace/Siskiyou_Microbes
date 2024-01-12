@@ -33,6 +33,7 @@ load("DATA/physeq.bac.Rdata")
 
 #Fungi
 load("DATA/physeq.fungi.Rdata")
+
 ```
 
 >First let's consider differences between sites where Horkelia seeds were collected (Home) and the one successful transplant site (Away)
@@ -41,7 +42,7 @@ load("DATA/physeq.fungi.Rdata")
 #comparing site 5 (away) with sites 1,9,and 10 (seed home) for both fungi and Bacteria. Basically want to ask if microbes where seeds were collected (sites 1,9,10) differ from site 5 where the new population is. Thanks!-Marko 
 physeq.bac.sub<-subset_samples(physeq.bac, Site=="1"| Site=="9"|Site=="10"| Site=="5")
 physeq.bac.away<-subset_samples(physeq.fungi,  Site=="5")
-
+  
 physeq.fungi.sub<-subset_samples(physeq.fungi, Site=="1"| Site=="9"|Site=="10"| Site=="5")
 physeq.fungi.away<-subset_samples(physeq.fungi,  Site=="5")
 
@@ -226,22 +227,55 @@ funguild_abund_rich$mpratio<-funguild_abund_rich$mutabund/funguild_abund_rich$pa
 funguild_abund_rich$mprich<-funguild_abund_rich$mutrich/funguild_abund_rich$pathrich
 funguild_abund_rich<-rename(funguild_abund_rich,Code=sample)%>% left_join(metaf, .)%>%filter(!is.na(mpratio))
 
-#update to retain only sites in permanovas
-funguild_abund_rich<-subset(funguild_abund_rich,Site=="1"|Site=="10"|Site=="9"|Site=="5")
+funguild_abund_richNS<-subset(funguild_abund_rich, Site!="5") #everything except successful site 
 
-fig3a<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
-                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
+```
+>plot different comparisons here 
+
+```{r fig 3,  echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#reorder factors so home gets plotted first 
+funguild_abund_rich<-group_by(funguild_abund_rich, Loc)%>%mutate(order=min(Site))
+funguild_abund_rich$Loc<-with(funguild_abund_rich, reorder(Loc, order))
+
+fig3c<-ggplot(data=subset(funguild_abund_rich, Site=="1"| Site=="9"|Site=="10"| Site=="5"),
+                          aes(x = Loc, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+            scale_x_discrete(labels=c("Home", "Away successful"))+
+  scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen ratio")
+
+fig3d<-ggplot(data=subset(funguild_abund_rich, Site=="1"| Site=="9"|Site=="10"| Site=="5"),
+                          aes(x = Loc, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+     scale_x_discrete(labels=c( "Home", "Away successful"))+
+  scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen richness")
+
+#save dataset for anovas later
+funguild_abund_rich0<- subset(funguild_abund_rich, Site=="1"| Site=="9"|Site=="10"| Site=="5")
+
+
+#update to retain only away sites 
+funguild_abund_rich<-subset(funguild_abund_rich,Loc=="Away")
+
+fig3a<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab(" ")+
+  scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen ratio")
   
 
-fig3b<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()+xlab("Site")+ scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
-                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
+fig3b<-ggplot(data=funguild_abund_rich, aes(x = Hsuccess, y=log(mprich), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab(" ")+
+  scale_x_discrete(labels=c("Away unsuccessful", "Away successful"))+ scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen richness")
 
 #plot 2 panel fig3
 pdf("Fig3.pdf", width = 12, height = 8)
-ggpubr::ggarrange(fig3a, fig3b, common.legend = T, legend="right")
+ggpubr::ggarrange(fig3a, fig3b, fig3c, fig3d, common.legend = T, legend="right")
 dev.off()
 
 
+#away unsuccessful vs home - not different 
+ggplot(data=funguild_abund_richNS, aes(x = Loc, y=log(mpratio))) + geom_boxplot()+theme_classic()+ xlab("Site")+     scale_x_discrete(labels=c("Away unsuccessful", "Home"))+
+  scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
+ggplot(data=funguild_abund_richNS, aes(x = Loc, y=log(mpratio), fill=Spp)) + geom_boxplot()+theme_classic()+ xlab("Site")+     scale_x_discrete(labels=c("Away unsuccessful", "Home"))+
+  scale_fill_manual(values=c('darkgrey', 'black'), name="Source", 
+                     labels = c("Horkelia","Bare ground"))+ ylab("mutualist:pathogen")
 ```
 
 >So mutualist to pathogen ratios (abundance and richness) are higher at the successful Horkelia sites, but they don't differ between Horkelia and bare ground at the successful site, which suggests that the mutualists are not in *response* to Horkelia presence
@@ -250,18 +284,42 @@ dev.off()
 
 #ANOVAS
 ```{r anovas, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
-#library(rcompanion)
-#transformTukey(funguild_abund_rich$mprich)#lambda=0.25
+library(rcompanion)
+#successful vs unsuccessful away (fig 3a, b)
+funguild_abund_rich$mprichT<-transformTukey(funguild_abund_rich$mprich)#lambda=0.35
+funguild_abund_rich$mpratioT<-transformTukey(funguild_abund_rich$mpratio)#lambda=0.2
 
-aov_mprich<-(aov((mprich^0.25)~ Hsuccess*Spp, funguild_abund_rich))
+aov_mpratio<-aov(mpratioT~ Hsuccess*Spp, funguild_abund_rich)
+summary(aov_mpratio)
+TukeyHSD(aov_mpratio)
+
+aov_mprich<-(aov(mprichT~ Hsuccess*Spp, funguild_abund_rich))
 summary(aov_mprich)
 TukeyHSD(aov_mprich)
 
-#transformTukey(funguild_abund_rich$mpratio)#lambda 0.125
+#home vs successful (fig3 c,d)
+funguild_abund_rich0$mprichT<-transformTukey(funguild_abund_rich0$mprich)#lambda=0.25
+funguild_abund_rich0$mpratioT<-transformTukey(funguild_abund_rich0$mpratio)#lambda=0.125
 
-aov_mpratio<-aov((mpratio^0.125)~ Hsuccess*Spp, funguild_abund_rich)
-summary(aov_mpratio)
-TukeyHSD(aov_mpratio)
+aov_mpratio0<-aov(mpratioT~ Loc*Spp, funguild_abund_rich0)
+summary(aov_mpratio0)
+TukeyHSD(aov_mpratio0)
+
+aov_mprich0<-(aov(mprichT~ Loc*Spp, funguild_abund_rich0))
+summary(aov_mprich0)
+TukeyHSD(aov_mprich0)
+
+#home vs unsuccessful (no fig)
+funguild_abund_richNS$mprichT<-transformTukey(funguild_abund_richNS$mprich)#lambda=0.325
+funguild_abund_richNS$mpratioT<-transformTukey(funguild_abund_richNS$mpratio)#lambda=0.15
+
+aov_mpratioNS<-aov(mpratioT~ Loc*Spp, funguild_abund_richNS)
+summary(aov_mpratioNS)
+TukeyHSD(aov_mpratioNS)
+
+aov_mprichNS<-(aov(mprichT~ Loc*Spp, funguild_abund_richNS))
+summary(aov_mprichNS)
+TukeyHSD(aov_mprichNS)
 
 ```
 >So M:P ratios were higher at the successful site and also higher in bare soils overall. 
